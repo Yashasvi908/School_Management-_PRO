@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+  
+  /* Mapping variables to Tailwind */
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-bg-base: var(--bg-base);
+  --color-card-base: var(--card-base);
+  --color-border-base: var(--border-base);
+  --color-text-main: var(--text-main);
+  --color-text-dim: var(--text-dim);
+}
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  
+  /* Light Mode Variables (User Specified) */
+  --primary: #4F46E5;
+  --secondary: #6366F1;
+  --bg-base: #F9FAFB;
+  --card-base: #FFFFFF;
+  --border-base: rgba(0, 0, 0, 0.08); /* Adjusted for light background */
+  --text-main: #1F2937;
+  --text-dim: #4B5563; /* Complementary dim text color */
+  
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme='dark'] {
+  /* Premium Dark Mode Overrides */
+  --bg-base: #050505; /* Deep rich black */
+  --card-base: rgba(18, 18, 20, 0.4); /* Glassmorphic dark card */
+  --border-base: rgba(255, 255, 255, 0.08);
+  --text-main: #fcfcfc;
+  --text-dim: #9ca3af;
+  
+  /* Additional depth variables */
+  --bg-secondary: #0a0a0c;
+  --glow-primary: rgba(79, 70, 229, 0.15);
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  @apply antialiased min-h-screen transition-colors duration-300;
+}
+
+/* Glassmorphism Classes */
+.glass {
+  @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10 shadow-3xl;
+}
+
+.glass-card {
+  @apply bg-white/[0.02] backdrop-blur-xl border border-white/5 shadow-2xl hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500;
+}
+
+/* Gradient Text */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+  /* Indigo hover */
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+/* Animation Utilities */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
