@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, ChevronLeft, ShieldAlert, Cpu, Search, Activity, Zap } from 'lucide-react';
+import { Home, ChevronLeft, ShieldAlert, Cpu, Search, Activity, Zap, Database } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 

@@ -22,6 +22,7 @@ import {
     CartesianGrid,
     Cell
 } from 'recharts';
+import { motion } from 'framer-motion';
 
 const ReportsAnalytics = () => {
     const reportTypes = [

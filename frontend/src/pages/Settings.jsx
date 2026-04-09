@@ -41,12 +41,13 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
+
 
 const Settings = () => {
     const [profileImage, setProfileImage] = useState(null);
     const fileInputRef = React.useRef(null);
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}') || {};
-    const userRole = storedUser.role || 'student';
+
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -111,8 +112,12 @@ const Settings = () => {
         ]
     };
 
+    const { user } = useSelector((state) => state.auth || {});
+    const userRole = user?.role || 'student';
+
     const tabs = roleConfigs[userRole] || roleConfigs['student'];
     const [activeTab, setActiveTab] = useState(tabs[0].id);
+
 
     const SectionHeader = ({ icon: Icon, title, description }) => (
         <div className="mb-8">
@@ -282,6 +287,30 @@ const Settings = () => {
             </div>
         </div>
     );
+
+    const AdminNotificationSettings = () => (
+        <div className="space-y-8 animate-in slide-in-from-right-8 duration-700">
+            <SectionHeader icon={Bell} title="System Notifications" description="Manage global broadcast and automated alert system" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ToggleRow label="Push Notifications" description="Browser alerts for staff & students" status={true} />
+                <ToggleRow label="Email Notifications" description="Daily digest and critical alerts" status={true} />
+                <ToggleRow label="SMS Gateway" description="OTP and emergency broadcasts" status={false} />
+                <ToggleRow label="Desktop Reports" description="Direct admin console alerts" status={true} />
+            </div>
+            <div className="space-y-4 pt-6">
+                <h4 className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Default Template Selection</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {['Classic', 'Modern', 'Minimal'].map(t => (
+                        <div key={t} className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer ${t === 'Modern' ? 'border-primary bg-primary/5 text-primary' : 'border-border-base bg-bg-base/30 text-text-dim'}`}>
+                            <span className="text-xs font-bold uppercase">{t} UI</span>
+                            {t === 'Modern' && <CheckCircle2 className="w-4 h-4" />}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
 
     const AdminSystemSettings = () => (
         <div className="space-y-8 animate-in slide-in-from-right-8 duration-700">
@@ -718,8 +747,8 @@ const Settings = () => {
             </div>
         </div>
     );
-
     const renderContent = () => {
+
         // Multi-role combined logic
         if (userRole === 'admin' || userRole === 'superadmin') {
             switch (activeTab) {

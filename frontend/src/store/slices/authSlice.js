@@ -1,10 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../api/axios';
+
+const storedUser = localStorage.getItem('user');
+const storedToken = localStorage.getItem('token');
 
 const initialState = {
-    user: JSON.parse(localStorage.getItem('user')) || null,
-    token: localStorage.getItem('token') || null,
-    isAuthenticated: !!localStorage.getItem('token'),
+    user: storedUser ? JSON.parse(storedUser) : null,
+    token: storedToken || null,
+    isAuthenticated: !!storedToken,
     loading: false,
     error: null,
 };
@@ -12,7 +15,9 @@ const initialState = {
 // Async thunk for login
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
     try {
-        const response = await axios.post('http://localhost:8000/api/auth/login', credentials);
+        const response = await api.post('/auth/login', credentials);
+
+
         return response.data;
     } catch (error) {
         // --- MOCK LOGIN BYPASS ---

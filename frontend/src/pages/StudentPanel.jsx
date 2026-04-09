@@ -33,7 +33,6 @@ import {
     MessageSquare,
     Library as LibraryIcon,
     Ticket,
-    Download as DownloadIcon,
     Archive,
     Inbox,
     Heart,
@@ -57,6 +56,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
 
 const StudentPanel = ({ tab: propTab }) => {
     const [searchParams, setSearchParams] = useSearchParams();

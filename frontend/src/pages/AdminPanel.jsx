@@ -27,7 +27,8 @@ import {
     UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
 
 // Import New Modules
 import DashboardOverview from '../components/Admin/Modules/DashboardOverview';
@@ -51,6 +52,7 @@ import AddTeacherForm from '../components/Admin/Forms/AddTeacherForm';
 const AdminPanel = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth || {});
     
     // UI States
@@ -166,9 +168,15 @@ const AdminPanel = () => {
                                             <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 p-3 text-[10px] font-black uppercase tracking-widest text-text-dim hover:text-primary hover:bg-primary/10 rounded-xl transition-all">
                                                 <SettingsIcon className="w-4 h-4" /> Security Settings
                                             </button>
-                                            <button className="w-full flex items-center gap-3 p-3 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all">
+                                            <button 
+                                                onClick={() => {
+                                                    dispatch(logout());
+                                                    navigate('/login');
+                                                }}
+                                                className="w-full flex items-center gap-3 p-3 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+                                             >
                                                 <LogOut className="w-4 h-4" /> Terminate Session
-                                            </button>
+                                             </button>
                                         </div>
                                     </motion.div>
                                 )}

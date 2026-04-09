@@ -11,7 +11,8 @@ import {
     AlertCircle, 
     User,
     Clock,
-    MapPin
+    MapPin,
+    Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 

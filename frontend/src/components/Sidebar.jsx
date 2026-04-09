@@ -37,13 +37,17 @@ import {
     Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
+import ThemeToggle from './common/ThemeToggle';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useSelector((state) => state.auth);
+    const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth?.user || {});
     const role = user?.role || 'admin';
+
 
     const [expandedGroups, setExpandedGroups] = useState(['User Management', 'Dashboard']);
 
@@ -66,7 +70,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             group: 'Management',
             icon: Users,
             items: [
-                { title: 'Students', icon: GraduationCap, path: '/student-dashboard', roles: ['superadmin', 'principal', 'admin'] },
+                { title: 'Students', icon: GraduationCap, path: role === 'student' ? '/student-dashboard' : '/students', roles: ['superadmin', 'principal', 'admin', 'student'] },
+
                 { title: 'Teachers', icon: Users, path: '/teachers', roles: ['superadmin', 'principal', 'admin'] },
                 { title: 'Staff', icon: Briefcase, path: '/staff', roles: ['superadmin', 'principal', 'admin'] },
                 { title: 'Users', icon: User, path: '/users', roles: ['superadmin', 'principal', 'admin'] },
@@ -252,7 +257,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                     </div>
 
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => {
+                            dispatch(logout());
+                            navigate('/login');
+                        }}
                         className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-card-base border border-border-base text-text-dim text-[11px] font-bold rounded-xl hover:border-primary/30 hover:bg-primary/10 hover:text-text-main transition-all duration-300 shadow-sm"
                     >
                         <LogOut className="w-3.5 h-3.5" />
