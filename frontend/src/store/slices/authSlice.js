@@ -1,13 +1,21 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/axios';
 
-const storedUser = localStorage.getItem('user');
-const storedToken = localStorage.getItem('token');
+const getStoredUser = () => {
+    try {
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
+    } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('user');
+        return null;
+    }
+};
 
 const initialState = {
-    user: storedUser ? JSON.parse(storedUser) : null,
-    token: storedToken || null,
-    isAuthenticated: !!storedToken,
+    user: getStoredUser(),
+    token: localStorage.getItem('token') || null,
+    isAuthenticated: !!localStorage.getItem('token'),
     loading: false,
     error: null,
 };
@@ -15,27 +23,18 @@ const initialState = {
 // Async thunk for login
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
     try {
-        const response = await api.post('/auth/login', credentials);
+        const response = await api.post('/auth/login', {
+            identifier: credentials.identifier, 
+            password: credentials.password
+        });
 
-
-        return response.data;
+        if (response.data.success) {
+            return response.data; // Now returns { success: true, token, user }
+        } else {
+            return rejectWithValue(response.data.message);
+        }
     } catch (error) {
-        // --- MOCK LOGIN BYPASS ---
-        // Since backend is removed, we simulate a successful login for any credentials
-        console.warn('Backend reachability issue detected. Switching to Mock Login Mode.');
-        
-        const mockResponse = {
-            user: {
-                id: 'mock-id-123',
-                name: credentials.identifier.split('@')[0] || 'Admin User',
-                email: credentials.identifier.includes('@') ? credentials.identifier : `${credentials.identifier}@school.com`,
-                role: credentials.role || 'admin',
-                schoolId: 'SCH-MOCK-001'
-            },
-            token: 'mock-jwt-token-for-frontend-testing'
-        };
-
-        return mockResponse;
+        return rejectWithValue(error.response?.data?.message || 'Connection to server failed');
     }
 });
 
@@ -76,12 +75,13 @@ const authSlice = createSlice({
             .addCase(login.fulfilled, (state, action) => {
                 state.loading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
-                state.token = action.payload.token;
+                const { token, user } = action.payload;
+                state.user = user;
+                state.token = token;
 
                 // Save to local storage
-                localStorage.setItem('user', JSON.stringify(action.payload.user));
-                localStorage.setItem('token', action.payload.token); // Assuming token is returned in payload
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('token', token);
             })
             .addCase(login.rejected, (state, action) => {
                 state.loading = false;

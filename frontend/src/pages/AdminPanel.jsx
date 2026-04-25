@@ -43,6 +43,7 @@ import ResourceManagement from '../components/Admin/Modules/ResourceManagement';
 import CommunicationManagement from '../components/Admin/Modules/CommunicationManagement';
 import ReportsAnalytics from '../components/Admin/Modules/ReportsAnalytics';
 import SystemSecurity from '../components/Admin/Modules/SystemSecurity';
+import ParentManagement from '../components/Admin/Modules/ParentManagement';
 
 // Modals & Forms
 import Modal from '../components/common/Modal';
@@ -71,14 +72,15 @@ const AdminPanel = () => {
         else if (path.includes('student')) setActiveTab('students');
         else if (path.includes('teacher')) setActiveTab('teachers');
         else if (path.includes('staff')) setActiveTab('staff');
+        else if (path.includes('parent')) setActiveTab('parents');
         else if (path.includes('classes') || path.includes('subjects') || path.includes('timetable') || path.includes('sections')) setActiveTab('academic');
         else if (path.includes('attendance')) setActiveTab('attendance');
         else if (path.includes('fees')) setActiveTab('finance');
         else if (path.includes('exam') || path.includes('result')) setActiveTab('exams');
         else if (path.includes('library') || path.includes('transport')) setActiveTab('resources');
-        else if (path.includes('notices') || path.includes('events')) setActiveTab('communication');
+        else if (path.includes('notices') || path.includes('events') || path.includes('chat')) setActiveTab('communication');
         else if (path.includes('analytics')) setActiveTab('reports');
-        else if (path.includes('security') || path.includes('backup') || path.includes('users')) setActiveTab('system');
+        else if (path.includes('security') || path.includes('backup')) setActiveTab('system');
         else if (path.includes('settings')) setActiveTab('settings');
     }, [location]);
 
@@ -88,6 +90,7 @@ const AdminPanel = () => {
             case 'students': return <StudentManagement setShowAddStudent={setShowAddStudent} />;
             case 'teachers': return <TeacherManagement setShowAddTeacher={setShowAddTeacher} />;
             case 'staff': return <StaffManagement />;
+            case 'parents': return <ParentManagement />;
             case 'academic': return <AcademicManagement />;
             case 'attendance': return <AttendanceManagement />;
             case 'finance': return <FinanceManagement />;
@@ -191,6 +194,7 @@ const AdminPanel = () => {
                         { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
                         { id: 'students', label: 'Students', icon: GraduationCap },
                         { id: 'teachers', label: 'Teachers', icon: UserCheck },
+                        { id: 'parents', label: 'Parents', icon: Users },
                         { id: 'staff', label: 'Staff', icon: Briefcase },
                         { id: 'academic', label: 'Academic', icon: BookOpen },
                         { id: 'attendance', label: 'Attendance', icon: Activity },

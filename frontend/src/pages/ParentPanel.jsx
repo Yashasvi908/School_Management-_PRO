@@ -41,6 +41,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ParentResults from '../components/Parent/Modules/Results';
 
 const ParentPanel = ({ tab: propTab }) => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -548,6 +549,7 @@ const ParentPanel = ({ tab: propTab }) => {
             case 'timetable': return <TimetableView />;
             case 'assignments': return <AssignmentsView />;
             case 'exams': return <ExamsView />;
+            case 'results': return <ParentResults selectedChildName={selectedChild} />;
             case 'fees': return <FeesView />;
             case 'notices': return <NoticesView />;
             case 'transport': return <TransportView />;
@@ -597,7 +599,7 @@ const ParentPanel = ({ tab: propTab }) => {
                 <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-bg-base/20 to-transparent z-10 pointer-events-none lg:hidden" />
                 <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-base/20 to-transparent z-10 pointer-events-none lg:hidden" />
                 <div className="flex bg-card-base p-2 rounded-[2rem] border border-border-base shadow-inner overflow-x-auto thin-scrollbar gap-2 scroll-smooth">
-                    {['overview', 'profile', 'attendance', 'subjects', 'timetable', 'assignments', 'exams', 'fees', 'notices', 'transport', 'settings'].map(t => (
+                    {['overview', 'profile', 'attendance', 'subjects', 'timetable', 'assignments', 'exams', 'results', 'fees', 'notices', 'transport', 'settings'].map(t => (
                         <button 
                             key={t}
                             onClick={() => handleTabChange(t)}

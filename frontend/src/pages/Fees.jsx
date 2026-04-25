@@ -13,6 +13,7 @@ import {
     Smartphone,
     Mail
 } from 'lucide-react';
+import api from '../api/axios';
 
 const Fees = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -43,9 +44,9 @@ const Fees = () => {
     React.useEffect(() => {
         const fetchFees = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/school/fees');
-                if (response.ok) {
-                    const data = await response.json();
+                const response = await api.get('/school/fees');
+                if (response.data) {
+                    const data = response.data;
                     if (data.length > 0) {
                         const mappedFees = data.map((fee, index) => ({
                             id: fee._id,
@@ -102,17 +103,13 @@ const Fees = () => {
 
         try {
             // Update status in backend
-            const response = await fetch(`http://localhost:8000/api/school/fees/${selectedInstallment.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    status: 'Paid',
-                    paymentDate: new Date(),
-                    paymentMethod: paymentMethod
-                })
+            const response = await api.put(`/school/fees/${selectedInstallment.id}`, {
+                status: 'Paid',
+                paymentDate: new Date(),
+                paymentMethod: paymentMethod
             });
 
-            if (response.ok) {
+            if (response.data) {
                 // Update local state
                 setInstallments(prev => prev.map(item =>
                     item.id === selectedInstallment.id

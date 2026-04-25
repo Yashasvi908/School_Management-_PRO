@@ -27,42 +27,79 @@ import { motion, AnimatePresence } from 'framer-motion';
 // --- MOCK CONSTANTS ---
 const CLASSES = ['10-A', '10-B', '9-A', '9-B', '8-A', '11-C', '12-A'];
 
+import api from '../../../api/axios';
+
 const AddStudent = () => {
     const [entryMode, setEntryMode] = useState('manual'); // 'manual' or 'bulk'
     const [isLoading, setIsLoading] = useState(false);
     const [showCredentials, setShowCredentials] = useState(false);
     const [generatedCreds, setGeneratedCreds] = useState(null);
+    const [classes, setClasses] = useState([]);
+    const [selectedClass, setSelectedClass] = useState(null);
 
     // --- MANUAL ENTRY STATE ---
     const [manualForm, setManualForm] = useState({
         name: '',
         email: '',
-        class: '',
+        classId: '',
+        sectionId: '',
         rollNumber: ''
     });
     const [formErrors, setFormErrors] = useState({});
 
-    // --- BULK UPLOAD STATE ---
-    const [bulkFile, setBulkFile] = useState(null);
-    const [parsedData, setParsedData] = useState([]);
-    const [dragActive, setDragActive] = useState(false);
+    // Fetch classes on mount
+    React.useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const res = await api.get('/admin/academic/classes');
+                if (res.data.success) {
+                    setClasses(res.data.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch classes', err);
+            }
+        };
+        fetchClasses();
+    }, []);
 
-    // --- HANDLERS ---
+    // Handle class change to update sections
+    const handleClassChange = (e) => {
+        const cid = e.target.value;
+        const cls = classes.find(c => c._id === cid);
+        setSelectedClass(cls);
+        setManualForm({ ...manualForm, classId: cid, sectionId: '' });
+    };
 
-    const handleManualSubmit = (e) => {
+    const handleManualSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        
-        // Simulating validation & API call
-        setTimeout(() => {
-            const studentId = `STU${Math.floor(1000 + Math.random() * 9000)}`;
-            const password = Math.random().toString(36).slice(-8).toUpperCase();
-            
-            setGeneratedCreds({ id: studentId, password, name: manualForm.name });
-            setShowCredentials(true);
+        setFormErrors({});
+
+        try {
+            const res = await api.post('/admin/students/register', {
+                fullIdentityName: manualForm.name,
+                academicEmail: manualForm.email,
+                classId: manualForm.classId,
+                sectionId: manualForm.sectionId,
+                rollRegistrationNumber: manualForm.rollNumber
+            });
+
+            if (res.data.success) {
+                setGeneratedCreds({
+                    id: res.data.data.credentials.studentId,
+                    password: res.data.data.credentials.temporaryPassword,
+                    name: manualForm.name
+                });
+                setShowCredentials(true);
+                setManualForm({ name: '', email: '', classId: '', sectionId: '', rollNumber: '' });
+                setSelectedClass(null);
+            }
+        } catch (err) {
+            console.error('Registration failed', err);
+            setFormErrors({ general: err.response?.data?.message || 'Failed to register student' });
+        } finally {
             setIsLoading(false);
-            setManualForm({ name: '', email: '', class: '', rollNumber: '' });
-        }, 1500);
+        }
     };
 
     const handleFileUpload = (e) => {
@@ -102,21 +139,6 @@ const AddStudent = () => {
                      <Plus className="w-10 h-10 text-primary" /> Add <span className="text-primary">Students</span>
                  </h2>
                  <p className="text-text-dim font-bold text-sm tracking-widest mt-2 uppercase opacity-60">Registration Hub & Lifecycle Management</p>
-            </div>
-            
-            <div className="flex bg-card-base p-1.5 rounded-[1.5rem] border border-border-base shadow-xl">
-                <button 
-                    onClick={() => setEntryMode('manual')}
-                    className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${entryMode === 'manual' ? 'bg-primary text-white shadow-lg' : 'text-text-dim hover:text-text-main'}`}
-                >
-                    Manual Entry
-                </button>
-                <button 
-                    onClick={() => setEntryMode('bulk')}
-                    className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${entryMode === 'bulk' ? 'bg-primary text-white shadow-lg' : 'text-text-dim hover:text-text-main'}`}
-                >
-                    Bulk Import
-                </button>
             </div>
         </div>
     );
@@ -165,12 +187,30 @@ const AddStudent = () => {
                         <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Assign Class</label>
                         <select 
                             required
-                            value={manualForm.class}
-                            onChange={(e) => setManualForm({...manualForm, class: e.target.value})}
+                            value={manualForm.classId}
+                            onChange={handleClassChange}
                             className="w-full px-6 py-4 bg-bg-base/30 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-primary/50 appearance-none transition-all cursor-pointer"
                         >
                             <option value="">Select a Class</option>
-                            {CLASSES.map(c => <option key={c} value={c}>Grade {c}</option>)}
+                            {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Select Section</label>
+                        <select 
+                            required
+                            disabled={!selectedClass}
+                            value={manualForm.sectionId}
+                            onChange={(e) => setManualForm({...manualForm, sectionId: e.target.value})}
+                            className="w-full px-6 py-4 bg-bg-base/30 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-primary/50 appearance-none transition-all cursor-pointer disabled:opacity-30"
+                        >
+                            <option value="">{selectedClass ? 'Choose Section' : 'Select Class First'}</option>
+                            {selectedClass?.sections.map(s => (
+                                <option key={s._id} value={s._id} disabled={s.isFull}>
+                                    Section {s.name} ({s.available} seats left) {s.isFull ? '[FULL]' : ''}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -365,7 +405,7 @@ const AddStudent = () => {
             <Header />
 
             <div className="px-2">
-                {entryMode === 'manual' ? <ManualEntryView /> : <BulkEntryView />}
+                 <ManualEntryView />
             </div>
 
             <CredentialsModal />

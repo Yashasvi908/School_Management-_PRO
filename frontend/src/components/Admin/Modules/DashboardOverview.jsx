@@ -34,19 +34,46 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 
+import { useSelector } from 'react-redux';
+import api from '../../../api/axios';
+
 const DashboardOverview = ({ setShowAddStudent, setShowAddTeacher, setShowAddExam }) => {
+    const [liveStats, setLiveStats] = React.useState(null);
+    const [charts, setCharts] = React.useState(null);
+    const { token } = useSelector(state => state.auth);
+
+    React.useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [statsRes, analyticsRes] = await Promise.all([
+                    api.get('/admin/dashboard/overview'),
+                    api.get('/admin/analytics/overview')
+                ]);
+                
+                if (statsRes.data.success) setLiveStats(statsRes.data.data);
+                if (analyticsRes.data.success) setCharts(analyticsRes.data.data);
+            } catch (err) {
+                console.error('Failed to fetch dashboard stats', err);
+            }
+        };
+
+        if (token) fetchDashboardData();
+    }, [token]);
+
     const stats = [
-        { title: 'Total Students', value: '1,240', change: '+5%', icon: GraduationCap, color: 'bg-indigo-500' },
-        { title: 'Total Teachers', value: '84', change: '+2%', icon: UserCheck, color: 'bg-emerald-500' },
-        { title: 'Total Staff', value: '42', change: '+1%', icon: Briefcase, color: 'bg-blue-500' },
-        { title: 'Today Attendance', value: '942', change: '92%', icon: Activity, color: 'bg-purple-500' },
-        { title: 'Fees Collected Today', value: '₹45,200', change: '+12%', icon: DollarSign, color: 'bg-amber-500' },
-        { title: 'Pending Fees', value: '₹2.8L', change: '-3%', icon: Clock, color: 'bg-rose-500' },
+        { title: 'Total Students', value: liveStats?.totalStudents ?? '...', change: '+0%', icon: GraduationCap, color: 'bg-indigo-500' },
+        { title: 'Total Teachers', value: liveStats?.totalTeachers ?? '...', change: '+0%', icon: UserCheck, color: 'bg-emerald-500' },
+        { title: 'Total Staff', value: liveStats?.totalStaff ?? '...', change: '+0%', icon: Briefcase, color: 'bg-blue-500' },
+        { title: 'Today Attendance', value: `${liveStats?.todayAttendancePercent || 0}%`, change: 'Optimal', icon: Activity, color: 'bg-purple-500' },
+        { title: 'Monthly Revenue', value: `₹${liveStats?.monthlyRevenue?.toLocaleString() || '0'}`, change: 'Live', icon: DollarSign, color: 'bg-amber-500' },
+        { title: 'Active Notices', value: liveStats?.activeNotices || 0, change: 'Sync', icon: Bell, color: 'bg-rose-500' },
     ];
 
-    const feeData = [
-        { name: 'Jan', amount: 4000 }, { name: 'Feb', amount: 3000 }, { name: 'Mar', amount: 5000 },
-        { name: 'Apr', amount: 4500 }, { name: 'May', amount: 6000 }, { name: 'Jun', amount: 5500 },
+    const feeData = charts?.feeCollectionTrend?.map(item => ({
+        name: new Date(2024, item._id - 1).toLocaleString('default', { month: 'short' }),
+        amount: item.collected
+    })) || [
+        { name: 'Jan', amount: 0 }, { name: 'Feb', amount: 0 }
     ];
 
     const attendanceData = [
@@ -55,15 +82,17 @@ const DashboardOverview = ({ setShowAddStudent, setShowAddTeacher, setShowAddExa
         { name: 'Fri', present: 86, absent: 14 },
     ];
 
-    const admissionData = [
-        { name: '2020', students: 800 }, { name: '2021', students: 950 }, { name: '2022', students: 1100 },
-        { name: '2023', students: 1240 }, { name: '2024', students: 1400 },
+    const admissionData = charts?.studentEnrollmentTrend?.map(item => ({
+        name: new Date(2024, item._id - 1).toLocaleString('default', { month: 'short' }),
+        students: item.count
+    })) || [
+        { name: '2020', students: 0 }
     ];
 
     const performanceData = [
-        { name: 'Students', value: 1240, color: '#6366f1' },
-        { name: 'Faculty', value: 84, color: '#10b981' },
-        { name: 'Staff', value: 42, color: '#3b82f6' },
+        { name: 'Students', value: liveStats?.totalStudents || 0, color: '#6366f1' },
+        { name: 'Faculty', value: liveStats?.totalTeachers || 0, color: '#10b981' },
+        { name: 'Staff', value: liveStats?.totalStaff || 0, color: '#3b82f6' },
         { name: 'External', value: 15, color: '#f59e0b' },
     ];
 

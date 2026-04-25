@@ -28,17 +28,110 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 
+import api from '../api/axios';
+
 const TeacherPanel = () => {
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth || {});
     const [activeTab, setActiveTab] = useState('overview');
-    const [activeClass, setActiveClass] = useState('10-A');
+    const [stats, setStats] = useState({ totalStudents: 0, pendingLeaves: 0, attendanceRate: '0%', todayClasses: 0 });
+    const [classes, setClasses] = useState([]);
+    const [activeClass, setActiveClass] = useState(null);
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get('/teacher/dashboard/stats');
+                if (res.data.success) setStats(res.data.data);
+            } catch (err) { console.error('Stats fetch failed', err); }
+        };
+
+        const fetchClasses = async () => {
+            try {
+                const res = await api.get('/teacher/classes');
+                if (res.data.success) {
+                    setClasses(res.data.data);
+                    if (res.data.data.length > 0 && !activeClass) {
+                        setActiveClass(res.data.data[0]);
+                    }
+                }
+            } catch (err) { console.error('Classes fetch failed', err); }
+        };
+
+        fetchStats();
+        fetchClasses();
+    }, []);
+
+    React.useEffect(() => {
+        const fetchRoster = async () => {
+            if (!activeClass) return;
+            setLoading(true);
+            try {
+                const classId = activeClass._id || activeClass.name;
+                // Fetch roster and daily attendance status in parallel
+                const [rosterRes, attendanceRes] = await Promise.all([
+                    api.get(`/teacher/classes/${classId}/students`),
+                    api.get('/attendance/daily', {
+                        params: {
+                            date: new Date().toISOString().split('T')[0],
+                            type: 'student',
+                            class: classId
+                        }
+                    })
+                ]);
+
+                if (rosterRes.data.success) {
+                    const roster = rosterRes.data.data;
+                    const attendance = attendanceRes.data.success ? attendanceRes.data.data : [];
+                    
+                    // Merge attendance status into roster
+                    const merged = roster.map(s => {
+                        const record = attendance.find(a => a._id === s._id);
+                        return {
+                            ...s,
+                            status: record?.status || 'present'
+                        };
+                    });
+                    setStudents(merged);
+                }
+            } catch (err) { console.error('Data fetch failed', err); }
+            setLoading(false);
+        };
+        fetchRoster();
+    }, [activeClass]);
+
+    const saveAttendance = async () => {
+        setLoading(true);
+        try {
+            const classId = activeClass._id || activeClass.name;
+            const records = students.map(s => ({
+                studentId: s._id,
+                status: s.status || 'present'
+            }));
+
+            const res = await api.post('/attendance/mark', {
+                date: new Date().toISOString().split('T')[0],
+                type: 'student',
+                classId,
+                records
+            });
+
+            if (res.data.success) {
+                alert('Attendance successfully uploaded to the registry.');
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to sync attendance');
+        }
+        setLoading(false);
+    };
 
     const teacherStats = [
-        { title: 'My Students', value: '124', icon: Users, color: 'bg-indigo-500' },
-        { title: 'Pending Marks', value: '12', icon: FileText, color: 'bg-rose-500' },
-        { title: "Today's Classes", value: '4', icon: Clock, color: 'bg-amber-500' },
-        { title: 'Attendance', value: '98%', icon: TrendingUp, color: 'bg-emerald-500' },
+        { title: 'My Students', value: stats.totalStudents, icon: Users, color: 'bg-indigo-500' },
+        { title: 'Pending Leaves', value: stats.pendingLeaves, icon: FileText, color: 'bg-rose-500' },
+        { title: "Today's Classes", value: stats.todayClasses, icon: Clock, color: 'bg-amber-500' },
+        { title: 'Attendance', value: stats.attendanceRate, icon: TrendingUp, color: 'bg-emerald-500' },
     ];
 
     const DashboardOverview = () => (
@@ -124,17 +217,12 @@ const TeacherPanel = () => {
         </div>
     );
 
-    const [students, setStudents] = useState([
-        { id: '01', name: 'Rohan Kumar', gender: 'M', attendance: '92%', lastLogin: '2026-03-14', status: 'present' },
-        { id: '02', name: 'Priya Sharma', gender: 'F', attendance: '95%', lastLogin: '2026-03-14', status: 'absent' },
-        { id: '03', name: 'Arjun Singh', gender: 'M', attendance: '88%', lastLogin: '2026-03-14', status: 'present' },
-    ]);
 
     const StudentRosterView = () => (
         <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-2">
                 <h3 className="text-2xl font-black text-text-main tracking-tighter uppercase flex items-center gap-4">
-                    <Users className="w-8 h-8 text-primary" /> Class Roster: {activeClass}
+                    <Users className="w-8 h-8 text-primary" /> Class Roster: {activeClass?.name || 'Loading...'}
                 </h3>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <div className="relative flex-1 md:w-64">
@@ -162,24 +250,24 @@ const TeacherPanel = () => {
                         </thead>
                         <tbody className="divide-y divide-border-base/50">
                             {students.map((student) => (
-                                <tr key={student.id} className="hover:bg-primary/[0.02] transition-colors group">
-                                    <td className="px-8 py-6 text-sm font-black text-primary">#{student.id}</td>
+                                <tr key={student._id} className="hover:bg-primary/[0.02] transition-colors group">
+                                    <td className="px-8 py-6 text-sm font-black text-primary">#{student.rollNumber || student.studentId?.slice(-4)}</td>
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">{student.name[0]}</div>
-                                            <span className="font-bold text-text-main text-sm">{student.name}</span>
+                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">{(student.user?.name || student.name)[0]}</div>
+                                            <span className="font-bold text-text-main text-sm">{student.user?.name || student.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-sm font-bold text-text-dim">{student.gender}</td>
+                                    <td className="px-8 py-6 text-sm font-bold text-text-dim text-center">{student.gender || 'OTHER'}</td>
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
                                             <div className="flex-1 bg-bg-base rounded-full h-1.5 w-16 overflow-hidden">
-                                                <div className="bg-primary h-full" style={{ width: student.attendance }}></div>
+                                                <div className="bg-primary h-full" style={{ width: '0%' }}></div>
                                             </div>
-                                            <span className="text-xs font-black text-text-main">{student.attendance}</span>
+                                            <span className="text-xs font-black text-text-main">0%</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-xs font-bold text-text-dim">{student.lastLogin}</td>
+                                    <td className="px-8 py-6 text-xs font-bold text-text-dim">{student.user?.lastLogin || 'N/A'}</td>
                                     <td className="px-8 py-6">
                                         <div className="flex gap-2">
                                             <button className="p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"><User className="w-4 h-4" /></button>
@@ -203,10 +291,16 @@ const TeacherPanel = () => {
                     <h3 className="text-2xl font-black text-text-main tracking-tighter uppercase flex items-center gap-4">
                         <CheckSquare className="w-8 h-8 text-emerald-500" /> Daily Attendance Marking
                     </h3>
-                    <p className="text-text-dim font-bold text-xs uppercase tracking-widest mt-1">Class {activeClass} • Today, {new Date().toLocaleDateString()}</p>
+                    <p className="text-text-dim font-bold text-xs uppercase tracking-widest mt-1">Class {activeClass?.name} • Today, {new Date().toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="px-6 py-3 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl shadow-emerald-500/20 hover:scale-105 transition-all">Save Attendance</button>
+                    <button 
+                        onClick={saveAttendance}
+                        disabled={loading}
+                        className="px-6 py-3 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {loading ? 'Uploading...' : 'Save Attendance'}
+                    </button>
                     <button className="p-3 bg-card-base border border-border-base rounded-xl text-text-dim hover:text-primary transition-all"><Search className="w-5 h-5" /></button>
                 </div>
             </div>
@@ -219,29 +313,32 @@ const TeacherPanel = () => {
                             <th className="px-8 py-5 text-[10px] font-black text-text-dim uppercase tracking-widest text-center">Present</th>
                             <th className="px-8 py-5 text-[10px] font-black text-text-dim uppercase tracking-widest text-center">Absent</th>
                             <th className="px-8 py-5 text-[10px] font-black text-text-dim uppercase tracking-widest text-center">Late</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-text-dim uppercase tracking-widest text-center">Excused</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-text-dim uppercase tracking-widest text-center">Leave</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border-base/50">
                         {students.map((student) => (
-                            <tr key={student.id} className="hover:bg-white/[0.01]">
+                            <tr key={student._id} className="hover:bg-white/[0.01]">
                                 <td className="px-8 py-6">
-                                    <span className="font-bold text-text-main">{student.name}</span>
+                                    <span className="font-bold text-text-main">{student.user?.name || student.name}</span>
                                 </td>
-                                {['present', 'absent', 'late', 'excused'].map((status) => (
+                                {['present', 'absent', 'late', 'leave'].map((status) => (
                                     <td key={status} className="px-8 py-6 text-center">
                                         <button 
                                             onClick={() => {
-                                                const updated = students.map(s => s.id === student.id ? {...s, status} : s);
+                                                const updated = students.map(s => s._id === student._id ? {...s, status} : s);
                                                 setStudents(updated);
                                             }}
                                             className={`w-10 h-10 rounded-2xl flex items-center justify-center mx-auto transition-all ${
-                                                student.status === status
-                                                ? status === 'present' ? 'bg-emerald-500 text-white' : status === 'absent' ? 'bg-rose-500 text-white' : status === 'late' ? 'bg-amber-500 text-white' : 'bg-indigo-500 text-white'
+                                                (student.status || 'present') === status
+                                                ? status === 'present' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' 
+                                                : status === 'absent' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' 
+                                                : status === 'late' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' 
+                                                : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
                                                 : 'bg-bg-base/50 border border-border-base text-text-dim hover:border-primary/30'
                                             }`}
                                         >
-                                            {student.status === status ? <CheckSquare className="w-5 h-5" /> : status[0].toUpperCase()}
+                                            {(student.status || 'present') === status ? <CheckCircle2 className="w-5 h-5" /> : status[0].toUpperCase()}
                                         </button>
                                     </td>
                                 ))}

@@ -52,7 +52,8 @@ const AppRoutes = () => {
                     <Route path="/students" element={<Dashboard />} />
                     <Route path="/teachers" element={<Dashboard />} />
                     <Route path="/staff" element={<Dashboard />} />
-                    <Route path="/users" element={<Dashboard />} />
+                    <Route path="/parents" element={<Dashboard />} />
+                    <Route path="/users" element={<Navigate to="/parents" replace />} />
                     
                     {/* Operations */}
                     <Route path="/attendance" element={isAdmin ? <Dashboard /> : <StudentPanel tab="attendance" />} />

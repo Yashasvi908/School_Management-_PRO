@@ -56,6 +56,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import StudentResults from '../components/Student/Modules/Results';
 
 
 const StudentPanel = ({ tab: propTab }) => {
@@ -701,51 +702,7 @@ const StudentPanel = ({ tab: propTab }) => {
         </div>
     );
 
-    const ResultsView = () => (
-        <div className="space-y-8 animate-in slide-in-from-right-8 duration-700">
-            <h3 className="text-2xl font-black text-text-main tracking-tighter uppercase px-2 flex items-center gap-4">
-                <Trophy className="w-8 h-8 text-primary" /> Term Assessment Results
-            </h3>
-            <div className="glass-card p-8 rounded-[2.5rem] border-border-base">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                    {[
-                        { label: 'Overall Grade', val: 'A+', color: 'text-primary' },
-                        { label: 'Total Marks', val: '452 / 500', color: 'text-text-main' },
-                        { label: 'Percentage', val: '90.4%', color: 'text-emerald-500' },
-                        { label: 'Class Rank', val: '#04', color: 'text-secondary' },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-bg-base/30 p-6 rounded-2xl border border-border-base text-center">
-                            <p className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1">{stat.label}</p>
-                            <p className={`text-3xl font-black ${stat.color} tracking-tighter`}>{stat.val}</p>
-                        </div>
-                    ))}
-                </div>
-                <div className="space-y-4">
-                    {[
-                        { sub: 'Mathematics', marks: 92, grade: 'A+' },
-                        { sub: 'Physics', marks: 88, grade: 'A' },
-                        { sub: 'Chemistry', marks: 95, grade: 'A+' },
-                        { sub: 'English', marks: 85, grade: 'A' },
-                        { sub: 'Computer Sci', marks: 92, grade: 'A+' },
-                    ].map((r, i) => (
-                        <div key={i} className="flex items-center justify-between p-5 bg-bg-base/20 rounded-2xl border border-border-base">
-                            <span className="font-bold text-text-main">{r.sub}</span>
-                            <div className="flex items-center gap-10">
-                                <div className="w-32 h-2 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary" style={{ width: `${r.marks}%` }} />
-                                </div>
-                                <span className="text-sm font-black text-text-main w-10">{r.marks}</span>
-                                <span className="text-sm font-black text-primary w-8">{r.grade}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <button className="w-full mt-10 py-5 bg-primary/10 text-primary border border-primary/20 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">
-                    <DownloadIcon className="w-5 h-5" /> Download Full Report Card (PDF)
-                </button>
-            </div>
-        </div>
-    );
+    const ResultsView = () => <StudentResults />;
 
     const EventsView = () => (
         <div className="space-y-8 animate-in fade-in duration-700">

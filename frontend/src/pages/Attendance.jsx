@@ -17,6 +17,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useSelector } from 'react-redux';
 
+import api from '../api/axios';
+
 const Attendance = () => {
     const { user } = useSelector((state) => state.auth || {});
     const role = user?.role || 'student';
@@ -47,17 +49,16 @@ const Attendance = () => {
         const fetchData = async () => {
             try {
                 const [studentsRes, attendanceRes] = await Promise.all([
-                    fetch('http://localhost:8000/api/school/students'),
-                    fetch('http://localhost:8000/api/school/attendance')
+                    api.get('/school/students'),
+                    api.get('/school/attendance')
                 ]);
 
-                if (studentsRes.ok) {
-                    const studentsData = await studentsRes.json();
-                    setStudents(studentsData);
+                if (studentsRes.data) {
+                    setStudents(studentsRes.data);
                 }
 
-                if (attendanceRes.ok) {
-                    const logsData = await attendanceRes.json();
+                if (attendanceRes.data) {
+                    const logsData = attendanceRes.data;
                     // Format logs for display
                     const formattedLogs = logsData.map(log => ({
                         time: new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -100,17 +101,13 @@ const Attendance = () => {
                 const randomStudent = students[Math.floor(Math.random() * students.length)];
 
                 try {
-                    const response = await fetch('http://localhost:8000/api/school/attendance', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            studentId: randomStudent._id,
-                            date: new Date(),
-                            status: 'Present'
-                        })
+                    const response = await api.post('/school/attendance', {
+                        studentId: randomStudent._id,
+                        date: new Date(),
+                        status: 'Present'
                     });
 
-                    if (response.ok) {
+                    if (response.data) {
                         setScanStatus('success');
                         const newLog = {
                             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

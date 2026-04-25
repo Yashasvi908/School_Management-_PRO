@@ -26,16 +26,37 @@ import {
     Pie
 } from 'recharts';
 
-const FinanceManagement = () => {
-    const [view, setView] = useState('fees'); // 'fees', 'reports', 'gateways'
+import api from '../../../api/axios';
+import { useSelector } from 'react-redux';
 
-    const collectionData = [
-        { month: 'Jan', collected: 450000, target: 500000 },
-        { month: 'Feb', collected: 520000, target: 500000 },
-        { month: 'Mar', collected: 380000, target: 500000 },
-        { month: 'Apr', collected: 610000, target: 600000 },
-        { month: 'May', collected: 590000, target: 600000 },
-        { month: 'Jun', collected: 300000, target: 400000 },
+const FinanceManagement = () => {
+    const [view, setView] = useState('fees'); 
+    const [structures, setStructures] = useState([]);
+    const [reports, setReports] = useState(null);
+    const { token } = useSelector(state => state.auth);
+
+    React.useEffect(() => {
+        const fetchFinanceData = async () => {
+            try {
+                const [structRes, reportRes] = await Promise.all([
+                    api.get('/admin/finance/structures'),
+                    api.get('/admin/finance/reports')
+                ]);
+                if (structRes.data.success) setStructures(structRes.data.data);
+                if (reportRes.data.success) setReports(reportRes.data.data);
+            } catch (err) {
+                console.error('Finance fetch error', err);
+            }
+        };
+        if (token) fetchFinanceData();
+    }, [token]);
+
+    const collectionData = reports?.monthlyCollection?.map(item => ({
+        month: new Date(2024, item._id - 1).toLocaleString('default', { month: 'short' }),
+        collected: item.collected,
+        target: 500000
+    })) || [
+        { month: 'Jan', collected: 0, target: 500000 }
     ];
 
     const revenueBreakdown = [
@@ -44,10 +65,13 @@ const FinanceManagement = () => {
         { name: 'Other', value: 15, color: '#10b981' },
     ];
 
-    const feeStructure = [
-        { type: 'Tuition Fee', amount: '₹12,000', frequency: 'Quarterly', category: 'Grade 10' },
-        { type: 'Laboratory Fee', amount: '₹2,500', frequency: 'Annual', category: 'Grade 9-12' },
-        { type: 'Bus Fee', amount: '₹1,500', frequency: 'Monthly', category: 'All' },
+    const feeStructure = structures.length > 0 ? structures.map(s => ({
+        type: s.name,
+        amount: `₹${s.amount.toLocaleString()}`,
+        frequency: s.frequency,
+        category: s.targetClass || 'All'
+    })) : [
+        { type: 'No templates found', amount: '₹0', frequency: '-', category: '-' }
     ];
 
     return (

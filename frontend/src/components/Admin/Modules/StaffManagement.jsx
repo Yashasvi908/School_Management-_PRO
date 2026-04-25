@@ -11,9 +11,13 @@ import {
     Truck,
     BookMarked,
     UserCircle,
-    Clock
+    Clock,
+    Edit2,
+    Trash2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import api from '../../../api/axios';
 
 const StaffManagement = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -25,11 +29,76 @@ const StaffManagement = () => {
 
     const roles = ['Accountant', 'Librarian', 'Receptionist', 'Transport Manager', 'Security'];
     
-    const staff = [
-        { name: 'Mr. Gupta', role: 'Accountant', contact: '+91 94250 11221', salary: '₹45,000', status: 'Active' },
-        { name: 'Mrs. Dsouza', role: 'Librarian', contact: '+91 94250 11222', salary: '₹35,000', status: 'Active' },
-        { name: 'Vikram Singh', role: 'Transport Manager', contact: '+91 94250 11223', salary: '₹30,000', status: 'On Route' },
-    ];
+    const [view, setView] = useState('list');
+    const [staffList, setStaffList] = useState([]);
+    const [deployData, setDeployData] = useState({ name: '', email: '', role: 'Accountant', contact: '', salary: '' });
+    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const { token } = useSelector(state => state.auth);
+
+    useEffect(() => {
+        const fetchStaff = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get('/admin/staff');
+                if (res.data.success) {
+                    setStaffList(res.data.data || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch staff', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (token && view === 'list') fetchStaff();
+    }, [token, view]);
+
+    const handleDeploy = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            if (deployData._id) {
+                const res = await api.put(`/admin/staff/${deployData._id}`, deployData);
+                if (res.data.success) {
+                    alert('Staff details updated successfully');
+                    setView('list');
+                }
+            } else {
+                const res = await api.post('/admin/staff', deployData);
+                if (res.data.success) {
+                    alert(`Deployed Successfully!\n\nLOGIN CREDENTIALS:\nID (Email or Name): ${res.data.data.email}\nPassword: ${res.data.data.password}`);
+                    setView('list');
+                }
+            }
+            setDeployData({ name: '', email: '', role: 'Accountant', contact: '', salary: '' });
+        } catch (err) {
+            alert(err.response?.data?.message || 'Operation failed');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to remove this staff member?')) return;
+        try {
+            await api.delete(`/admin/staff/${id}`);
+            setStaffList(staffList.filter(s => s._id !== id));
+        } catch (error) {
+            alert('Delete failed');
+        }
+    };
+
+    const handleEdit = (staff) => {
+        setDeployData({
+            _id: staff._id,
+            name: staff.user?.name || '',
+            email: staff.user?.email || '',
+            role: staff.role || 'Accountant',
+            contact: staff.contact || '',
+            salary: staff.salary || ''
+        });
+        setView('deploy');
+    };
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 pb-20">
@@ -59,18 +128,23 @@ const StaffManagement = () => {
                 </div>
 
                 <div className="flex gap-3 relative z-10">
-                    <button className="px-6 py-4 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                    <button onClick={() => { setView('list'); setDeployData({ name: '', email: '', role: 'Accountant', contact: '', salary: '' }); }} className={`px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2 ${view === 'list' ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95' : 'bg-bg-base/50 text-text-dim border border-border-base hover:bg-bg-base'}`}>
+                        Registry
+                    </button>
+                    <button onClick={() => setView('deploy')} className={`px-6 py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2 ${view === 'deploy' ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-95' : 'bg-bg-base/50 text-text-dim border border-border-base hover:bg-bg-base'}`}>
                         <Plus className="w-4 h-4" /> Deploy New Faculty
                     </button>
                 </div>
             </div>
 
+            {view === 'list' ? (
+                <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Staff', val: '42', color: 'text-indigo-500' },
-                    { label: 'On-Site Now', val: '38', color: 'text-emerald-500' },
-                    { label: 'On Leave', val: '04', color: 'text-rose-500' },
-                    { label: 'Monthly Payroll', val: '₹4.8L', color: 'text-amber-500' },
+                    { label: 'Total Staff', val: staffList.length, color: 'text-indigo-500' },
+                    { label: 'On-Site Now', val: staffList.filter(s => s.status === 'active').length, color: 'text-emerald-500' },
+                    { label: 'On Leave', val: staffList.filter(s => s.status === 'inactive').length, color: 'text-rose-500' },
+                    { label: 'Monthly Payroll', val: `₹${(staffList.reduce((acc, curr) => acc + (curr.salary || 0), 0) / 100000).toFixed(1)}L`, color: 'text-amber-500' },
                 ].map((stat, i) => (
                     <div key={i} className="glass-card p-6 rounded-[2rem] border border-border-base/50 bg-bg-base/30">
                         <p className="text-[9px] font-black text-text-dim uppercase tracking-[0.2em] mb-1">{stat.label}</p>
@@ -98,6 +172,7 @@ const StaffManagement = () => {
                 <table className="w-full text-left">
                     <thead className="bg-bg-base/50 border-b border-border-base">
                         <tr>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-dim">ID</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-dim">Staff Member</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-dim">Assigned Role</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-text-dim">Contact</th>
@@ -106,29 +181,106 @@ const StaffManagement = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {staff.map((s, i) => (
+                        {staffList.map((s, i) => (
                             <tr key={i} className="border-b border-border-base/30 hover:bg-white/[0.02] transition-colors group">
+                                <td className="px-6 py-5 text-[11px] font-black text-indigo-500 uppercase tracking-widest">{s.employeeId}</td>
                                 <td className="px-6 py-5">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-black text-xs">{s.name[0]}</div>
-                                        <span className="text-sm font-bold text-text-main">{s.name}</span>
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-black text-xs">{s.user?.name?.[0] || '?'}</div>
+                                        <span className="text-sm font-bold text-text-main">{s.user?.name || 'Unknown'}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
                                     <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest px-3 py-1 bg-indigo-500/10 rounded-full">{s.role}</span>
                                 </td>
-                                <td className="px-6 py-5 text-xs font-bold text-text-dim uppercase md:lowercase tracking-tighter">{s.contact}</td>
+                                <td className="px-6 py-5 text-xs font-bold text-text-dim uppercase md:lowercase tracking-tighter">{s.contact || 'N/A'}</td>
                                 <td className="px-6 py-5">
-                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${s.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${s.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                                         {s.status}
                                     </span>
                                 </td>
-                                <td className="px-6 py-5 text-right"><MoreVertical className="w-4 h-4 text-text-dim cursor-pointer" /></td>
+                                <td className="px-6 py-5 text-right">
+                                    <div className="flex gap-4 justify-end items-center">
+                                        <Edit2 className="w-4 h-4 text-emerald-500 cursor-pointer hover:scale-110 transition-transform" onClick={() => handleEdit(s)} />
+                                        <Trash2 className="w-4 h-4 text-rose-500 cursor-pointer hover:scale-110 transition-transform" onClick={() => handleDelete(s._id)} />
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+                </>
+            ) : (
+                <div className="glass-card p-10 rounded-[3rem] border-border-base bg-indigo-500/5 animate-in fade-in duration-500 max-w-4xl mx-auto mt-8">
+                    <h4 className="text-2xl font-black text-text-main uppercase tracking-tighter mb-8">Faculty <span className="text-indigo-500">Deployment</span></h4>
+                    <form onSubmit={handleDeploy} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Staff Member Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                placeholder="E.g., John Doe" 
+                                value={deployData.name}
+                                onChange={(e) => setDeployData({...deployData, name: e.target.value})}
+                                className="w-full px-6 py-4 bg-bg-base/50 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-indigo-500/50" 
+                            />
+                        </div>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Staff Email (Optional)</label>
+                            <input 
+                                type="email" 
+                                placeholder="john.doe@school.edu" 
+                                value={deployData.email}
+                                onChange={(e) => setDeployData({...deployData, email: e.target.value})}
+                                className="w-full px-6 py-4 bg-bg-base/50 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-indigo-500/50" 
+                            />
+                        </div>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Assign Role</label>
+                            <select 
+                                required
+                                value={deployData.role}
+                                onChange={(e) => setDeployData({...deployData, role: e.target.value})}
+                                className="w-full px-6 py-4 bg-bg-base/50 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-indigo-500/50 appearance-none" 
+                            >
+                                {roles.map(r => <option key={r} value={r} className="bg-bg-base">{r}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Contact Number</label>
+                            <input 
+                                type="text" 
+                                required
+                                placeholder="+91 XXXXX XXXXX" 
+                                value={deployData.contact}
+                                onChange={(e) => setDeployData({...deployData, contact: e.target.value})}
+                                className="w-full px-6 py-4 bg-bg-base/50 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-indigo-500/50" 
+                            />
+                        </div>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-dim uppercase tracking-widest ml-1">Monthly Payroll / Salary</label>
+                            <input 
+                                type="text" 
+                                required
+                                placeholder="₹50,000" 
+                                value={deployData.salary}
+                                onChange={(e) => setDeployData({...deployData, salary: e.target.value})}
+                                className="w-full px-6 py-4 bg-bg-base/50 border border-border-base rounded-2xl text-sm font-bold text-text-main focus:outline-none focus:border-indigo-500/50" 
+                            />
+                        </div>
+                        <div className="flex justify-end mt-4 md:col-span-2">
+                            <button 
+                                type="submit"
+                                disabled={submitting}
+                                className="px-12 py-4 bg-indigo-500 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {deployData._id ? 'Update Staff Member' : 'Confirm Deployment'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </motion.div>
     );
 };

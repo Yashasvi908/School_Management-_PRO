@@ -34,7 +34,8 @@ import {
     PieChart,
     Briefcase,
     LayoutDashboard,
-    Mail
+    Mail,
+    UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
@@ -45,7 +46,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const dispatch = useDispatch();
-    const { user } = useSelector((state) => state.auth?.user || {});
+    const { user } = useSelector((state) => state.auth || {});
     const role = user?.role || 'admin';
 
 
@@ -70,11 +71,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             group: 'Management',
             icon: Users,
             items: [
-                { title: 'Students', icon: GraduationCap, path: role === 'student' ? '/student-dashboard' : '/students', roles: ['superadmin', 'principal', 'admin', 'student'] },
+                { title: 'Students', icon: GraduationCap, path: role === 'student' ? '/student-dashboard' : '/students', roles: ['superadmin', 'principal', 'admin'] },
 
-                { title: 'Teachers', icon: Users, path: '/teachers', roles: ['superadmin', 'principal', 'admin'] },
+                { title: 'Teachers', icon: UserCheck, path: '/teachers', roles: ['superadmin', 'principal', 'admin'] },
                 { title: 'Staff', icon: Briefcase, path: '/staff', roles: ['superadmin', 'principal', 'admin'] },
-                { title: 'Users', icon: User, path: '/users', roles: ['superadmin', 'principal', 'admin'] },
+                { title: 'Parents', icon: Users, path: '/parents', roles: ['superadmin', 'principal', 'admin'] },
             ]
         },
         {
